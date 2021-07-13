@@ -35,18 +35,17 @@ end
 Base.isapprox(h1::Harmony, h2::Harmony) = Set(h1.pitches .% 12) == Set(h2.pitches .% 12)
 
 struct Chord
-    tonica::Int
-    modifier::String
+    name::Vector{String}
     harmony::Harmony
 end
 
-Chord(t::String,m::String,h::Vector{String}) = Chord(name_to_pitch(t), m, Harmony(h))
+Chord(n::Vector{String},h::Vector{String}) = Chord(n, Harmony(h))
 
 Base.length(c::Chord) = length(c.harmony)
 Base.:(==)(c1::Chord, c2::Chord) = c1.harmony == c2.harmony
 Base.isapprox(c1::Chord, c2::Chord) = c1.harmony ≈ c2.harmony
 
-name(c::Chord) = chop( pitch_to_name( c.tonica ); tail=1 ) * c.modifier
+name(c::Chord) = join(c.name,"")
 
 Base.:(==)(c1::Chord, h2::Harmony) = c1.harmony == h2
 Base.:(==)(h2::Harmony, c1::Chord) = c1 == h2
