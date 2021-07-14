@@ -1,9 +1,11 @@
 module ChordFinder
 
 import MIDI: pitch_to_name, name_to_pitch
+#import Base: transpose
 
 export Harmony, trim, pitch_to_name, name_to_pitch
-export Chord, name, pitchclass
+export Chord, name, pitchclass, transpose, show_pc, chords, chordnames
+export all_chords, modifier_symbols
 
 struct Harmony
     pitches::Vector{Int}
@@ -11,25 +13,41 @@ end
 
 Harmony(h::Vector{String}) = Harmony(name_to_pitch.(h))
 
+"""
+    transpose(h::Harmony,semitones)
+    Transpose the harmony by the given amount of semitones
+"""
+Base.transpose(h::Harmony,semitones) = Harmony(h.pitches .+ semitones)
+
 Base.length(h::Harmony) = length(h.pitches)
 Base.:(==)(h1::Harmony, h2::Harmony) = h1.pitches == h2.pitches
 pitch_to_name(h::Harmony) = pitch_to_name.(h.pitches)
 
+function pitchclass(i)::String
+    r = i % 12
+    r == 10 && return("t")
+    r == 11 && return("e")
+    string(r)
+end
+
+pitchclass(h::Harmony) = pitchclass.(h.pitches)
+pitchclass(s::String) = pitchclass(Harmony([s]))
+
 """
     trim(h::Harmony)
-    Remove redundant notes in harmony
+    Remove redundant notes in harmony. It preserves the order.
 """
 function trim(h::Harmony)
     h1 = deepcopy(h)
     for i in 2:length(h)
         for j in 1:(i-1)
             if( h.pitches[i] % 12) == (h.pitches[j] % 12)
-                deleteat!(h1.pitches,i) ## ith note already found
+                h1.pitches[i] = -1 ## ith note already found
                 continue
             end
         end
     end
-    h1
+    Harmony(h1.pitches[h1.pitches .>= 0])
 end
 
 Base.isapprox(h1::Harmony, h2::Harmony) = Set(h1.pitches .% 12) == Set(h2.pitches .% 12)
@@ -39,6 +57,10 @@ struct Chord
     harmony::Harmony
 end
 
+"""
+    Chord(n::Vector{String},h::Vector{String})
+    Short-hand to define Chord from name-vector and harmony vector.
+"""
 Chord(n::Vector{String},h::Vector{String}) = Chord(n, Harmony(h))
 
 Base.length(c::Chord) = length(c.harmony)
@@ -53,17 +75,26 @@ Base.:(==)(h2::Harmony, c1::Chord) = c1 == h2
 Base.isapprox(c1::Chord, h2::Harmony) = c1.harmony ≈ h2
 Base.isapprox(h2::Harmony,c1::Chord) = c1 ≈ h2
 
-function pitchclass(i)::String
-    r = i % 12
-    r == 10 && return("t")
-    r == 11 && return("e")
-    string(r)
+"""
+    transpose(c::Chord, semitones)
+    transpose the chord by the given amount of semitones
+    Example:
+    ```{julia}
+        transpose(Chord(["C"], ["C","E","G"]),1) == Chord(["C#"], ["C#","F","G#"])
+    ```
+"""
+function Base.transpose(c::Chord,p)
+    newharmony = transpose(c.harmony,p)
+    newname = copy(c.name)
+    newname[1] = pitch_to_name(newharmony.pitches[1]) |> chop
+    Chord(newname, newharmony)    
 end
 
-pitchclass(h::Harmony) = pitchclass.(h.pitches)
 pitchclass(c::Chord) = pitchclass(c.harmony)
+show_pc(pc) = join(pc, " ")
 
-    
+trim(c::Chord) = trim(c.harmony)
+
 ## Chords from http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
 ## More systematic: http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers: mor esystematic, but less complete
 ## See also https://en.wikipedia.org/wiki/List_of_chords
@@ -78,14 +109,15 @@ const modifier_symbols = Dict(
     "aug" => "+", ## obs not superscript in Lilypond
     "dim" => "°",
     "7" => "⁷",
-    "maj7" => "ᐞ",
+    "maj7" => "ᐞ", ## Δ looks better, but should be superscript
     "dim7" => "°⁷",
     "maj7b5" => "ᐞ♭⁵", ## TODO: supercript ♭
     "aug7" => "⁷♯⁵", ## TODO: superscript ♯
     "m7b5" => "ø", ## TODO superscript ø
     "6" => "⁶",
-    "maj9" => "Δ⁹", ## 7 is maj, not 9
+    "maj9" => "ᐞ⁹", ## 7 is maj, not 9
     "sus4" => "ˢᵘˢ⁴",
+    "sus2" => "ˢᵘˢ²",
 )
 
 const c_chords =
@@ -144,7 +176,53 @@ const c_chords =
         Chord(["C","ᴾ⁵"],     ["C","G","C5"]), ## Powerchord. Name from wikipedia. http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers
     ]
 
-## OBS: quite a lot of minors are missing
+## OBS: it looks like quite a lot of minors are missing?
 
+"""
+    all_chords
+    Vector containing all chords
+    all_chords[45]
+    Chord(["C♯"], Harmony([61, 65, 68]))
+"""
+const all_chords = Chord[]
 
+for p in 0:11
+    for c in 1:length(c_chords)
+        push!(all_chords,transpose(c_chords[c],p))
+    end
+end
+
+"""
+    chords(h::Harmony)
+    Return chords matching harmony:
+    If there is a chord matching the harmony, return that (as a 1-element vector).
+    Else trim the chord to non-redundant pich-classes and return all matching
+"""
+function chords(h::Harmony)
+    found = Chord[]
+    for c in all_chords
+        if c.harmony == h
+            return([c])
+        elseif c.harmony ≈ trim(h)
+            push!(found, c)
+        end
+    end
+    found
+end
+
+chords(h::Vector{String}) = chords(Harmony(h))
+
+function chordnames(h::Harmony)
+    cs = chords(h)
+    names = String[]
+    for c in cs
+        n = name(c)
+        if first(pitchclass(c.name[1])) != pitchclass(h)[1] ## alt bass
+            n = n * "/" * chop(pitch_to_name(h.pitches[1]))
+        end
+        push!(names, n)
+    end
+    names
+end
+chordnames(s::Vector{String}) = chordnames(Harmony(s))
 end
