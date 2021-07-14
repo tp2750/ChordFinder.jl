@@ -4,7 +4,7 @@ import MIDI: pitch_to_name, name_to_pitch
 #import Base: transpose
 
 export Harmony, trim, pitch_to_name, name_to_pitch
-export Chord, name, pitchclass, transpose, show_pc, chords, chordnames
+export Chord, name, pitchclass, transpose, show_pc, chords, chordnames, modifier, isminor
 export all_chords, modifier_symbols
 
 struct Harmony
@@ -67,7 +67,30 @@ Base.length(c::Chord) = length(c.harmony)
 Base.:(==)(c1::Chord, c2::Chord) = c1.harmony == c2.harmony
 Base.isapprox(c1::Chord, c2::Chord) = c1.harmony ≈ c2.harmony
 
-name(c::Chord) = join(c.name,"")
+function name(c::Chord; pretty = true)
+    c1 = deepcopy(c)
+    if (pretty & hasmodifier(c))
+        c1.name[end] = modifier_symbols[c1.name[end]]
+    end
+    join(c1.name,"")
+end
+
+function isminor(c::Chord)
+    length(c.name) == 1 && return(false) ## plain major
+    length(c.name) >= 2 && c.name[2] == "m" && return(true) ## minor
+    false
+end
+
+function hasmodifier(c::Chord)
+    length(c.name) == 1 && return(false) ## plain major
+    length(c.name) == 2 && c.name[2] == "m" && return(false) ## plain minor
+    true
+end
+
+function modifier(c::Chord)
+    (! hasmodifier(c)) && return("")
+    last(c.name)
+end
 
 Base.:(==)(c1::Chord, h2::Harmony) = c1.harmony == h2
 Base.:(==)(h2::Harmony, c1::Chord) = c1 == h2
@@ -111,70 +134,96 @@ const modifier_symbols = Dict(
     "7" => "⁷",
     "maj7" => "ᐞ", ## Δ looks better, but should be superscript
     "dim7" => "°⁷",
+    "m7b5" => "ø", ## TODO superscript ø
     "maj7b5" => "ᐞ♭⁵", ## TODO: supercript ♭
     "aug7" => "⁷♯⁵", ## TODO: superscript ♯
-    "m7b5" => "ø", ## TODO superscript ø
     "6" => "⁶",
+    "9" => "⁹",
     "maj9" => "ᐞ⁹", ## 7 is maj, not 9
+    "7b5 9" => "⁷♭⁵⁹",
+    "7b9" => "⁷♭⁹",
+    "7#9" => "⁷♯⁹",
+    "7#5#9" => "⁷♯⁵♯⁹",
+    "maj9" => "ᐞ⁹", ## 7 is maj, not 9
+    "11" => "¹¹",
+    "7#11"=> "⁷♯¹¹",
+    "7#9#11" => "⁷♯⁹♯¹¹",
+    "maj7#11" => "ᐞ♯¹¹", ## 7 is maj, not 11
+    "13" => "¹³",
+    "7#11b13" => "⁷♯¹¹♭¹³",
+    "7b13" => "⁷♭¹³",
+    "7b9b13" => "⁷♭⁹♭¹³",
+    "7b9 13" => "⁷♭⁹ ¹³",
+    "maj13" => "ᐞ¹³", # 7 is maj, not 13
+    "9 13" => "⁹ ¹³", 
     "sus4" => "ˢᵘˢ⁴",
+    "7sus4" => "⁷ˢᵘˢ⁴",
+    "9sus4" => "⁹ˢᵘˢ⁴",
+    "add9" => "ᵃᵈᵈ⁹",
+    "add11" => "ᵃᵈᵈ¹¹",
+    "lyd" => "ˡʸᵈ",
+    "alt" => "ᵃˡᵗ",    
     "sus2" => "ˢᵘˢ²",
+    "P5" => "ᴾ⁵", # power chord
+    
 )
 
-const c_chords =
+const c_chords=
     [
         ## Base
         Chord(["C"],     ["C","E","G"]),
         Chord(["C","m"], ["C","Eb","G"]),
-        Chord(["C","+"], ["C","E","G#"]), ## aug
-        Chord(["C","°"], ["C","Eb","Gb"]), ## dim
+        Chord(["C","aug"], ["C","E","G#"]), ## aug +
+        Chord(["C","dim"], ["C","Eb","Gb"]), ## dim °
         ## 7ths
-        Chord(["C","⁷"],     ["C","E","G","Bb"]),
-        Chord(["C","m","⁷"], ["C","Eb","G","Bb"]),
-        Chord(["C","ᐞ"],     ["C","E","G","B"]), ## maj7
-        Chord(["C","m","ᐞ"], ["C","Eb","G","B"]), ## maj7
-        Chord(["C","°⁷"],    ["C","Eb","Gb","A"]), ## dim7 ## OBS: minor
-        Chord(["C","ø"],     ["C","Eb","Gb","Bb"]), ## m7b5 ## OBS: minor
-        Chord(["C","m","ᐞ♭⁵"], ["C","Eb","Gb","B"]), ## maj7b5
-        Chord(["C","⁷♯⁵"],   ["C","E","G#","Bb"]), ## aug7
-        Chord(["C","ᐞ♯⁵"],   ["C","E","G#","B"]), ## maj7#5
+        Chord(["C","7"],     ["C","E","G","Bb"]),
+        Chord(["C","m","7"], ["C","Eb","G","Bb"]),
+        Chord(["C","maj7"],     ["C","E","G","B"]), ## maj7 ᐞ
+        Chord(["C","m","maj7"], ["C","Eb","G","B"]), ## maj7
+        Chord(["C","dim7"],    ["C","Eb","Gb","A"]), ## dim7 ## OBS: minor
+        Chord(["C","m7b5"],     ["C","Eb","Gb","Bb"]), ## m7b5 ## OBS: minor ø
+        Chord(["C","m","maj7b5"], ["C","Eb","Gb","B"]), ## maj7b5
+        Chord(["C","aug7"],   ["C","E","G#","Bb"]), ## aug7
+        Chord(["C","maj7#5"],   ["C","E","G#","B"]), ## maj7#5
         ## 6th
-        Chord(["C","⁶"],     ["C","E","G","A"]),
-        Chord(["C","m","⁶"],     ["C","Eb","G","A"]),
+        Chord(["C","6"],     ["C","E","G","A"]),
+        Chord(["C","m","6"],     ["C","Eb","G","A"]),
         ## 9th
-        Chord(["C","⁹"],       ["C","E","G","Bb","D5"]),
-        Chord(["C","m","⁹"],   ["C","Eb","G","Bb","D5"]),
-        Chord(["C","m","⁷♭⁵⁹"],["C","Eb","Gb","Bb","D5"]),
-        Chord(["C","⁷♭⁹"],     ["C","E","G","Bb","Db5"]),
-        Chord(["C","⁷♯⁹"],     ["C","E","G","Bb","D#5"]),
-        Chord(["C","⁷♯⁵♯⁹"],     ["C","E","G#","Bb","D#5"]),
-        Chord(["C","Δ⁹"],       ["C","E","G","B","D5"]), ## maj9 cf http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
+        Chord(["C","9"],       ["C","E","G","Bb","D5"]),
+        Chord(["C","m","9"],   ["C","Eb","G","Bb","D5"]),
+        Chord(["C","m","7b5 9"],["C","Eb","Gb","Bb","D5"]),
+        Chord(["C","7b9"],     ["C","E","G","Bb","Db5"]),
+        Chord(["C","7#9"],     ["C","E","G","Bb","D#5"]),
+        Chord(["C","7#5#9"],     ["C","E","G#","Bb","D#5"]),
+        Chord(["C","maj9"],       ["C","E","G","B","D5"]), ## maj9 cf http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
         ## 11th
-        Chord(["C","¹¹"],      ["C","E","G","Bb","D5","F5"]),
-        Chord(["C","m","¹¹"],  ["C","Eb","G","Bb","D5","F5"]),
-        Chord(["C","⁷♯¹¹"],    ["C","E","G","Bb","D5","F#5"]), ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
-        Chord(["C","⁷♯⁹♯¹¹"],  ["C","E","G","Bb","D#5","F#5"]),
-        Chord(["C","Δ♯¹¹"],    ["C","E","G","B","D5","F#5"]),
+        Chord(["C","11"],      ["C","E","G","Bb","D5","F5"]),
+        Chord(["C","m","11"],  ["C","Eb","G","Bb","D5","F5"]),
+        Chord(["C","7#11"],    ["C","E","G","Bb","D5","F#5"]), ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
+        Chord(["C","7#9#11"],  ["C","E","G","Bb","D#5","F#5"]),
+        Chord(["C","maj7#11"],    ["C","E","G","B","D5","F#5"]),
         ## 13th
-        Chord(["C","¹³"],      ["C","E","G","Bb","D5","F5","A5"]),
-        Chord(["C","m","¹³"],  ["C","Eb","G","Bb","D5","F5","A5"]),
-        Chord(["C","⁷♯¹¹♭¹³"], ["C","E","G","Bb","D5","F#5","Ab5"]),
-        Chord(["C","⁷♭¹³"],    ["C","E","G","Bb","D5","F5","Ab5"]),  ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
-        Chord(["C","⁷♭⁹♭¹³"],  ["C","E","G","Bb","Db5","F5","Ab5"]), ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
-        Chord(["C","⁷♭⁹¹³"],   ["C","E","G","Bb","Db5","F5","A5"]), ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
-        Chord(["C","Δ¹³"],     ["C","E","G","B","D5","F5","A5"]), ## as maj9, it is the 7th that is maj
-        Chord(["C","⁹ ¹³"],    ["C","E","G","Bb","D5","A5"]), ## only http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers
+        Chord(["C","13"],      ["C","E","G","Bb","D5","F5","A5"]),
+        Chord(["C","m","13"],  ["C","Eb","G","Bb","D5","F5","A5"]),
+        Chord(["C","7#11b13"], ["C","E","G","Bb","D5","F#5","Ab5"]),
+        Chord(["C","7b13"],    ["C","E","G","Bb","D5","F5","Ab5"]),  ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
+        Chord(["C","7b9b13"],  ["C","E","G","Bb","Db5","F5","Ab5"]), ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
+        Chord(["C","7 b9 13"],   ["C","E","G","Bb","Db5","F5","A5"]), ## repeated in http://lilypond.org/doc/v2.20/Documentation/notation/chord-name-chart
+        Chord(["C","maj13"],     ["C","E","G","B","D5","F5","A5"]), ## as maj9, it is the 7th that is maj
+        Chord(["C","9 13"],    ["C","E","G","Bb","D5","A5"]), ## only http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers
         ## sus4
-        Chord(["C","ˢᵘˢ⁴"],     ["C","F","G"]),
-        Chord(["C","⁷ˢᵘˢ⁴"],     ["C","F","G", "Bb"]),
-        Chord(["C","⁹ˢᵘˢ⁴"],     ["C","F","G", "Bb","D5"]),
+        Chord(["C","sus4"],     ["C","F","G"]),
+        Chord(["C","7sus4"],     ["C","F","G", "Bb"]),
+        Chord(["C","9sus4"],     ["C","F","G", "Bb","D5"]),
         ## Other
-        Chord(["C","ᵃᵈᵈ⁹"],     ["C","E","G", "D5"]), ## Lilypond: C⁹??
-        Chord(["C","m","ᵃᵈᵈ¹¹"],["C","Eb","G", "F5"]), ## Lilypond: Cm¹¹??
-        Chord(["C","ˡʸᵈ"],     ["C","E","G", "B","F#5"]), 
-        Chord(["C","ᵃˡᵗ"],     ["C","E","G", "Bb","Db5","Eb5","F#5","Ab5"]),
-        Chord(["C","ˢᵘˢ²"],    ["C","D","G"]), ## http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers
-        Chord(["C","ᴾ⁵"],     ["C","G","C5"]), ## Powerchord. Name from wikipedia. http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers
+        Chord(["C","add9"],     ["C","E","G", "D5"]), ## Lilypond: C⁹??
+        Chord(["C","m","add11"],["C","Eb","G", "F5"]), ## Lilypond: Cm¹¹??
+        Chord(["C","lyd"],     ["C","E","G", "B","F#5"]), 
+        Chord(["C","alt"],     ["C","E","G", "Bb","Db5","Eb5","F#5","Ab5"]),
+        Chord(["C","sus2"],    ["C","D","G"]), ## http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers
+        Chord(["C","P5"],     ["C","G","C5"]), ## Powerchord. Name from wikipedia. http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers
     ]
+
 
 ## OBS: it looks like quite a lot of minors are missing?
 
