@@ -16,9 +16,10 @@ c1 = Chord(["C"],["C","E","G"])
 @testset "Chord" begin
     @test name(c1) == "C"
     @test h1 ≈ h2 ≈ h3 ≈ c1
-    @test isminor(Chord(["C","m"],["C","Eb","G"]))
+    @test isminor(Chord("Cm")) ## ["C","m"],["C","Eb","G"]))
     @test ! isminor(c1)
-    @test ! isminor(Chord(["C","7"],["C","E","G","Bb"]))
+    @test ! isminor(Chord("C7")) ## ["C","7"],["C","E","G","Bb"]))
+    @test isminor(Chord("Cm7")) 
 end
 
 @testset "Chordnames" begin

@@ -226,6 +226,18 @@ const c_chords=
 
 
 ## OBS: it looks like quite a lot of minors are missing?
+"""
+    Chord(s::String)
+    Get chord based on name (key in all_chords)
+"""
+function Chord(s::String)
+    for c in all_chords
+        if name(c; pretty = false) == s
+            return(c)
+        end
+    end
+    return Chord(String[],String[])
+end
 
 """
     all_chords
