@@ -21,12 +21,12 @@ Wikipedia also has a [list of chords](https://en.wikipedia.org/wiki/List_of_chor
 
 For notation, I use names based on [Lilypond](http://lilypond.org/doc/v2.20/Documentation/notation/common-chord-modifiers) and try to replicate the notation as well as possible in Unicode. I still need to find superscripted versions of ♭, ♯ and ø.
 
-The [wikipedia list](https://en.wikipedia.org/wiki/List_of_chords) introduces "pitch classes" as a notation of pitch mod 12: 0, 1, ..., 9, t, e.
+The [Wikipedia list](https://en.wikipedia.org/wiki/List_of_chords) introduces "pitch classes" as a notation of pitch mod 12: 0, 1, ..., 9, t, e.
 This is a useful way of printing chords.
 
 ## When are chords equal
 
-I define chords to be identical (=) if their vector of pich-plasses are identical (same order of notes), and I call the _similar_ (≈) if the _set_ of pich classes are identical (not considering order).
+I define chords to be identical (==) if their vector of pitch-classes are identical (same order of notes), and I call the _similar_ (≈) if the _set_ of pitch classes are identical (not considering order).
 
 With this in place, we can take all 44 chords from Lilypond, and make all 11 transpositions by semitones, and check how many are similar:
 
@@ -110,7 +110,7 @@ Similarly, C°⁷ is the "3-table" and D♯°⁷, F♯°⁷, A°⁷ are the "rot
 
 # Das Wohltemperierte Clavier
 
-Now I have enugh to find the chords in Bach's preludium.
+Now I have enough to find the chords in Bach's preludium.
 
 Below, I have typed in the the broken chords from Praeludium I Das Wohltemperierte Clavier as vectors of notes.
 Then run the `chordnames` function to get the corresponding chords.
@@ -202,4 +202,4 @@ julia> show(d;allcols = true, truncate = 0)
 
 ```
 
-We can see that good old Bach is actually quite imaginative, and is using a could of chords not covered this far!
+We can see that good old Bach is actually quite imaginative, and is using a couple of chords not covered this far!
