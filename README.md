@@ -30,7 +30,7 @@ I define chords to be identical (==) if their vector of pitch-classes are identi
 
 With this in place, we can take all 44 chords from Lilypond, and make all 11 transpositions by semitones, and check how many are similar:
 
-```{julia}
+```julia
     similar = 0
     for i in 2:length(all_chords)
         for j in 1:(i-1)
@@ -53,7 +53,7 @@ The result is at  102 out of 528 chords are similar (19.3%).
 
 Here are the examples similar to the original 44 c-chords:
 
-```{julia}
+```julia
     similar = 0
     synonyms = Dict{String,Vector{String}}()
     for i in 1:length(ChordFinder.c_chords)
@@ -115,7 +115,7 @@ Now I have enough to find the chords in Bach's preludium.
 Below, I have typed in the the broken chords from Praeludium I Das Wohltemperierte Clavier as vectors of notes.
 Then run the `chordnames` function to get the corresponding chords.
 
-```{julia}
+```julia
 prae = [
         ["C","E","G","C5","E5"],
         ["C","D","A","D5","F5"],
